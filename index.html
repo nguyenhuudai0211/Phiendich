@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Phiên Dịch Việt - Anh</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="header">
+    <h1>Phiên Dịch 🇻🇳 ↔ 🇺🇸</h1>
+    <div class="header-actions">
+      <button id="btn-speed" class="btn-small" title="Đổi tốc độ đọc">🐢 Chậm (0.8x)</button>
+      <button id="btn-clear" class="btn-small btn-danger" title="Xóa lịch sử">🗑️ Xóa</button>
+    </div>
+  </header>
+
+  <div id="status-bar" class="status-bar">
+    Bấm nút bên dưới để bắt đầu nói
+  </div>
+
+  <main id="chat-list" class="chat-list">
+    <div class="empty-state">
+      Bấm nút <strong>Đỏ</strong> để nói Tiếng Việt.<br />
+      Bấm nút <strong>Xanh</strong> để nói Tiếng Anh.
+    </div>
+  </main>
+
+  <footer class="controls">
+    <button id="btn-vi" class="mic-btn mic-vi">
+      <span class="flag">🇻🇳</span>
+      <span class="label">NÓI TIẾNG VIỆT</span>
+      <span class="sub">Dịch sang Anh</span>
+    </button>
+
+    <button id="btn-en" class="mic-btn mic-en">
+      <span class="flag">🇺🇸</span>
+      <span class="label">NÓI TIẾNG ANH</span>
+      <span class="sub">Dịch sang Việt</span>
+    </button>
+  </footer>
+
+  <script src="translate.js"></script>
+  <script src="speech.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
