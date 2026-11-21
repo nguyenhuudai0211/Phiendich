@@ -2,6 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
+  <meta name="referrer" content="no-referrer" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -28,6 +29,7 @@
       </div>
 
       <div class="header-actions">
+        <button id="btn-test-audio" class="chip-btn" title="Mở khóa & Thử loa">🔊 Thử loa</button>
         <button id="btn-speed" class="chip-btn" title="Đổi tốc độ đọc">🐢 Chậm</button>
         <button id="btn-type-toggle" class="icon-btn" title="Gõ chữ thử">⌨️</button>
         <button id="btn-clear" class="icon-btn danger" title="Xóa lịch sử">🗑️</button>
@@ -36,7 +38,7 @@
 
     <div id="status-bar" class="status-bar">
       <span class="status-dot"></span>
-      <span id="status-text">Sẵn sàng — Bấm nút bên dưới để nói</span>
+      <span id="status-text">Bấm "🔊 Thử loa" hoặc nút bên dưới để bắt đầu</span>
     </div>
 
     <div id="type-bar" class="type-bar hidden">
