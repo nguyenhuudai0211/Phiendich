@@ -8,11 +8,13 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0f172a" />
   <title>Phiên Dịch Pro — Việt ↔ Anh</title>
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="manifest" href="manifest.json" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=5" />
 </head>
 <body>
   <div class="bg-glow bg-glow-1"></div>
@@ -22,13 +24,7 @@
     <!-- Header -->
     <header class="header">
       <div class="brand">
-        <div class="brand-logo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-            <line x1="12" y1="19" x2="12" y2="22"/>
-          </svg>
-        </div>
+        <img src="icon.svg" alt="Logo" class="brand-logo-img" width="42" height="42" />
         <div class="brand-text">
           <div class="brand-title-row">
             <h1>Phiên Dịch</h1>
@@ -39,7 +35,7 @@
       </div>
 
       <div class="header-actions">
-        <button id="btn-test-audio" class="pill-btn" title="Kiểm tra loa & mic">🔊 Thử loa</button>
+        <button id="btn-test-audio" class="pill-btn" title="Kiểm tra loa">🔊 Thử loa</button>
         <button id="btn-type-toggle" class="icon-btn" title="Gõ chữ dịch">⌨️</button>
         <button id="btn-settings" class="icon-btn" title="Cài đặt">⚙️</button>
         <button id="btn-clear" class="icon-btn danger" title="Xóa lịch sử">🗑️</button>
@@ -57,20 +53,17 @@
     <!-- Quick Type Bar -->
     <div id="type-bar" class="type-bar hidden">
       <select id="type-dir" class="type-select">
-        <option value="vi-en">🇻🇳 → 🇺🇸</option>
-        <option value="en-vi">🇺🇸 → 🇻🇳</option>
+        <option value="vi-en">Việt → Anh</option>
+        <option value="en-vi">Anh → Việt</option>
       </select>
-      <input id="type-input" type="text" placeholder="Nhập câu cần dịch..." />
+      <input id="type-input" type="text" placeholder="Nhập câu cần dịch & phát loa..." />
       <button id="btn-type-send" class="type-send">Dịch</button>
     </div>
 
     <!-- Conversation Area -->
     <main id="chat-list" class="chat-list">
       <div class="empty-state">
-        <div class="empty-visual">
-          <div class="empty-ring"></div>
-          <div class="empty-core">🎙️</div>
-        </div>
+        <img src="icon.svg" alt="Logo" class="empty-logo" width="76" height="76" />
         <h2>Sẵn sàng phiên dịch</h2>
         <p>
           Bấm nút <strong class="c-red">ĐỎ</strong> để nói Tiếng Việt (loa phát Tiếng Anh).<br />
@@ -78,8 +71,8 @@
         </p>
         <div class="empty-tips">
           <span>⚡ Dịch tức thì</span>
-          <span>🔊 Tự động phát loa</span>
-          <span>✨ Chuẩn giao tiếp</span>
+          <span>🔊 Tự phát loa</span>
+          <span>🔍 Phóng to chữ</span>
         </div>
       </div>
     </main>
@@ -87,15 +80,30 @@
     <!-- Live Speech Preview -->
     <div id="live-preview" class="live-preview hidden"></div>
 
+    <!-- Quick Phrases Bar (1 chạm dịch & đọc ngay) -->
+    <div class="quick-bar" id="quick-bar">
+      <button class="quick-chip" data-text="Xin chào, rất vui được gặp bạn">👋 Xin chào</button>
+      <button class="quick-chip" data-text="Cảm ơn bạn rất nhiều">🙏 Cảm ơn</button>
+      <button class="quick-chip" data-text="Cái này bao nhiêu tiền?">💵 Bao nhiêu tiền?</button>
+      <button class="quick-chip" data-text="Làm ơn nói chậm lại một chút">🐢 Nói chậm lại</button>
+      <button class="quick-chip" data-text="Nhà vệ sinh ở đâu vậy?">🚻 Nhà vệ sinh?</button>
+      <button class="quick-chip" data-text="Cho tôi hỏi đường đi đến đây">🗺️ Hỏi đường</button>
+    </div>
+
     <!-- Floating Bottom Controls -->
     <footer class="controls">
       <button id="btn-vi" class="mic-btn mic-vi">
         <div class="mic-head">
           <span class="flag-box">
-            <svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#da251d"/><polygon points="15,3.8 16.9,9.5 22.8,9.5 18,13 19.8,18.6 15,15.1 10.2,18.6 12,13 7.2,9.5 13.1,9.5" fill="#ffeb3b"/></svg>
+            <svg width="34" height="23" viewBox="0 0 30 20">
+              <rect width="30" height="20" fill="#da251d"/>
+              <polygon points="15,3.8 16.9,9.5 22.8,9.5 18,13 19.8,18.6 15,15.1 10.2,18.6 12,13 7.2,9.5 13.1,9.5" fill="#ffeb3b"/>
+            </svg>
           </span>
           <span class="mic-badge">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a1 1 0 1 0-2 0 3 3 0 0 1-6 0 1 1 0 1 0-2 0 5 5 0 0 0 4 4.9V19H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-3.1A5 5 0 0 0 17 11Z"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a1 1 0 1 0-2 0 3 3 0 0 1-6 0 1 1 0 1 0-2 0 5 5 0 0 0 4 4.9V19H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-3.1A5 5 0 0 0 17 11Z"/>
+            </svg>
           </span>
         </div>
         <span class="mic-title">TIẾNG VIỆT</span>
@@ -105,14 +113,16 @@
       <button id="btn-en" class="mic-btn mic-en">
         <div class="mic-head">
           <span class="flag-box">
-            <svg viewBox="0 0 30 20">
+            <svg width="34" height="23" viewBox="0 0 30 20">
               <rect width="30" height="20" fill="#b22234"/>
               <path d="M0,3.1h30M0,6.2h30M0,9.2h30M0,12.3h30M0,15.4h30M0,18.5h30" stroke="#fff" stroke-width="1.5"/>
               <rect width="13" height="10.8" fill="#3c3b6e"/>
             </svg>
           </span>
           <span class="mic-badge">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a1 1 0 1 0-2 0 3 3 0 0 1-6 0 1 1 0 1 0-2 0 5 5 0 0 0 4 4.9V19H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-3.1A5 5 0 0 0 17 11Z"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a1 1 0 1 0-2 0 3 3 0 0 1-6 0 1 1 0 1 0-2 0 5 5 0 0 0 4 4.9V19H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-3.1A5 5 0 0 0 17 11Z"/>
+            </svg>
           </span>
         </div>
         <span class="mic-title">TIẾNG ANH</span>
@@ -140,11 +150,9 @@
       </div>
 
       <div class="setting-group">
-        <label for="gemini-key-input">
-          ✨ Chế độ AI Siêu Chuẩn (Gemini API Key - Tùy chọn)
-        </label>
+        <label for="gemini-key-input">✨ Chế độ AI Siêu Chuẩn (Gemini API Key - Tùy chọn)</label>
         <p class="setting-hint">
-          Dán khóa miễn phí từ <strong>aistudio.google.com</strong> để dịch mượt như người bản xứ, hiểu cả tiếng lóng & giọng vùng miền. Chỉ lưu riêng trên máy này, không bị lộ lên GitHub.
+          Dán khóa miễn phí từ <strong>aistudio.google.com</strong> để dịch sát nghĩa giao tiếp nhất. Chỉ lưu trong máy, không lộ lên GitHub.
         </p>
         <input id="gemini-key-input" type="password" placeholder="Để trống nếu dùng Google Translate..." />
       </div>
@@ -153,8 +161,16 @@
     </div>
   </div>
 
-  <script src="translate.js"></script>
-  <script src="speech.js"></script>
-  <script src="app.js"></script>
+  <!-- Fullscreen Zoom Modal (Đưa cho người nước ngoài đọc) -->
+  <div id="zoom-modal" class="zoom-modal hidden">
+    <button id="btn-close-zoom" class="zoom-close">✕ Đóng</button>
+    <div id="zoom-original" class="zoom-original"></div>
+    <div id="zoom-translated" class="zoom-translated"></div>
+    <button id="btn-zoom-speak" class="zoom-speak">🔊 Đọc to câu này</button>
+  </div>
+
+  <script src="translate.js?v=5"></script>
+  <script src="speech.js?v=5"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>
