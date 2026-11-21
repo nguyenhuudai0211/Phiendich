@@ -5,44 +5,94 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="theme-color" content="#0f172a" />
-  <title>Phiên Dịch Việt - Anh</title>
+  <meta name="theme-color" content="#0b1120" />
+  <title>Phiên Dịch Việt ↔ Anh</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="header">
-    <h1>Phiên Dịch 🇻🇳 ↔ 🇺🇸</h1>
-    <div class="header-actions">
-      <button id="btn-speed" class="btn-small" title="Đổi tốc độ đọc">🐢 Chậm (0.8x)</button>
-      <button id="btn-clear" class="btn-small btn-danger" title="Xóa lịch sử">🗑️ Xóa</button>
-    </div>
-  </header>
+  <div class="app-shell">
+    <header class="header">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="22"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Phiên Dịch Giọng Nói</h1>
+          <p class="subtitle">Việt Nam ↔ Tiếng Anh</p>
+        </div>
+      </div>
 
-  <div id="status-bar" class="status-bar">
-    Bấm nút bên dưới để bắt đầu nói
+      <div class="header-actions">
+        <button id="btn-speed" class="chip-btn" title="Đổi tốc độ đọc">🐢 Chậm</button>
+        <button id="btn-type-toggle" class="icon-btn" title="Gõ chữ thử">⌨️</button>
+        <button id="btn-clear" class="icon-btn danger" title="Xóa lịch sử">🗑️</button>
+      </div>
+    </header>
+
+    <div id="status-bar" class="status-bar">
+      <span class="status-dot"></span>
+      <span id="status-text">Sẵn sàng — Bấm nút bên dưới để nói</span>
+    </div>
+
+    <div id="type-bar" class="type-bar hidden">
+      <select id="type-dir" class="type-select">
+        <option value="vi-en">Việt → Anh</option>
+        <option value="en-vi">Anh → Việt</option>
+      </select>
+      <input id="type-input" type="text" placeholder="Nhập câu muốn dịch & phát loa..." />
+      <button id="btn-type-send" class="type-send">Dịch</button>
+    </div>
+
+    <main id="chat-list" class="chat-list">
+      <div class="empty-state">
+        <div class="empty-orb">🎙️</div>
+        <h2>Chạm để trò chuyện</h2>
+        <p>
+          Bấm nút <strong class="txt-red">ĐỎ</strong> để nói Tiếng Việt (loa phát Tiếng Anh).<br />
+          Bấm nút <strong class="txt-blue">XANH</strong> để nói Tiếng Anh (loa phát Tiếng Việt).
+        </p>
+      </div>
+    </main>
+
+    <div id="live-preview" class="live-preview hidden"></div>
+
+    <footer class="controls">
+      <button id="btn-vi" class="mic-btn mic-vi">
+        <div class="mic-top">
+          <span class="flag-badge flag-vn">
+            <svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#da251d"/><polygon points="15,4 16.8,9.5 22.6,9.5 17.9,12.9 19.7,18.4 15,15 10.3,18.4 12.1,12.9 7.4,9.5 13.2,9.5" fill="#ffff00"/></svg>
+          </span>
+          <span class="mic-circle">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a1 1 0 1 0-2 0 3 3 0 0 1-6 0 1 1 0 1 0-2 0 5 5 0 0 0 4 4.9V19H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-3.1A5 5 0 0 0 17 11Z"/></svg>
+          </span>
+        </div>
+        <span class="label">NÓI TIẾNG VIỆT</span>
+        <span class="sub">Loa phát Tiếng Anh</span>
+      </button>
+
+      <button id="btn-en" class="mic-btn mic-en">
+        <div class="mic-top">
+          <span class="flag-badge flag-us">
+            <svg viewBox="0 0 30 20">
+              <rect width="30" height="20" fill="#b22234"/>
+              <path d="M0,3.1h30M0,6.2h30M0,9.2h30M0,12.3h30M0,15.4h30M0,18.5h30" stroke="#fff" stroke-width="1.5"/>
+              <rect width="13" height="10.8" fill="#3c3b6e"/>
+            </svg>
+          </span>
+          <span class="mic-circle">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a1 1 0 1 0-2 0 3 3 0 0 1-6 0 1 1 0 1 0-2 0 5 5 0 0 0 4 4.9V19H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-3.1A5 5 0 0 0 17 11Z"/></svg>
+          </span>
+        </div>
+        <span class="label">NÓI TIẾNG ANH</span>
+        <span class="sub">Loa phát Tiếng Việt</span>
+      </button>
+    </footer>
   </div>
-
-  <main id="chat-list" class="chat-list">
-    <div class="empty-state">
-      Bấm nút <strong>Đỏ</strong> để nói Tiếng Việt.<br />
-      Bấm nút <strong>Xanh</strong> để nói Tiếng Anh.
-    </div>
-  </main>
-
-  <footer class="controls">
-    <button id="btn-vi" class="mic-btn mic-vi">
-      <span class="flag">🇻🇳</span>
-      <span class="label">NÓI TIẾNG VIỆT</span>
-      <span class="sub">Dịch sang Anh</span>
-    </button>
-
-    <button id="btn-en" class="mic-btn mic-en">
-      <span class="flag">🇺🇸</span>
-      <span class="label">NÓI TIẾNG ANH</span>
-      <span class="sub">Dịch sang Việt</span>
-    </button>
-  </footer>
 
   <script src="translate.js"></script>
   <script src="speech.js"></script>
