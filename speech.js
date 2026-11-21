@@ -6,7 +6,6 @@ const SpeechModule = {
   audioCtx: null,
   currentUtterance: null,
   voices: [],
-  micGranted: false,
 
   initVoices() {
     if (!("speechSynthesis" in window)) return;
@@ -23,16 +22,7 @@ const SpeechModule = {
   },
 
   async ensureMicPermission() {
-    if (this.micGranted) return true;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((t) => t.stop());
-      this.micGranted = true;
-      return true;
-    } catch (_) {
-      return false;
-    }
+    return true;
   },
 
   unlockAudio() {
@@ -67,19 +57,13 @@ const SpeechModule = {
     } catch (_) {}
   },
 
-  async startListening(langCode, { onInterim, onResult, onEnd, onError }) {
+  startListening(langCode, { onInterim, onResult, onEnd, onError }) {
     if (!this.isSupported()) {
-      onError("Trình duyệt chưa hỗ trợ thu âm. Hãy dùng Chrome hoặc Safari.");
+      onError("Trình duyệt này không hỗ trợ thu âm. Hãy mở bằng Chrome hoặc Safari.");
       return;
     }
 
     this.unlockAudio();
-    const ok = await this.ensureMicPermission();
-    if (!ok) {
-      onError("Chrome đang chặn Micro! Hãy cấp quyền Micro trên thanh địa chỉ.");
-      return;
-    }
-
     this.stopListening();
     this.stopAllAudio();
 
@@ -99,9 +83,8 @@ const SpeechModule = {
     const deliverNow = (text) => {
       if (delivered || !text) return;
       delivered = true;
-      // Nhả mic ngay để dịch + phát loa nhanh tối đa
       this.stopListening();
-      setTimeout(() => onResult(text), 120);
+      setTimeout(() => onResult(text), 150);
     };
 
     recog.onresult = (event) => {
@@ -118,7 +101,6 @@ const SpeechModule = {
       const display = (finalTranscript + " " + interim).trim();
       if (onInterim && display) onInterim(display);
 
-      // Vừa chốt câu xong là dịch liền không chờ trễ
       if (finalTranscript.trim()) {
         deliverNow(finalTranscript.trim());
       }
@@ -127,8 +109,10 @@ const SpeechModule = {
     recog.onerror = (event) => {
       if (event.error === "aborted" && delivered) return;
       const msgMap = {
-        "not-allowed": "Chưa cấp quyền Micro. Hãy bấm Cho phép (Allow).",
-        "no-speech": "Không nghe thấy tiếng. Bấm lại và nói rõ hơn nhé.",
+        "not-allowed": "Bạn đã lỡ bấm Chặn Micro. Hãy bấm biểu tượng bên trái link web để bật lại Mic.",
+        "service-not-allowed": "Trình duyệt đang khóa Micro. Hãy mở link trực tiếp bằng Chrome/Safari.",
+        "audio-capture": "Không tìm thấy Micro trên máy. Kiểm tra xem mic có đang cắm hoặc bật không.",
+        "no-speech": "Không nghe thấy tiếng. Bấm lại và nói to hơn nhé.",
         network: "Lỗi mạng. Kiểm tra lại Wi-Fi / 4G.",
       };
       onError(msgMap[event.error] || `Lỗi Micro: ${event.error}`);
@@ -145,7 +129,12 @@ const SpeechModule = {
 
     this.recognition = recog;
     this.isListening = true;
-    recog.start();
+    try {
+      recog.start();
+    } catch (e) {
+      this.isListening = false;
+      onError("Không bật được Micro. Hãy tải lại trang (F5) rồi thử lại.");
+    }
   },
 
   stopListening() {
@@ -266,7 +255,7 @@ const SpeechModule = {
       };
       this.audioPlayer.onended = playNext;
       this.audioPlayer.onerror = () => {
-        if (onError) onError("Không phát được loa. Hãy kiểm tra âm lượng máy hoặc quyền Âm thanh.");
+        if (onError) onError("Không phát được loa. Kiểm tra âm lượng máy nhé.");
         if (onDone) onDone();
       };
 
