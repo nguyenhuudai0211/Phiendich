@@ -1,7 +1,7 @@
 const SpeechModule = {
   recognition: null,
   isListening: false,
-  speechRate: 0.9,
+  speechRate: parseFloat(localStorage.getItem("phiendich_rate") || "0.95"),
   audioPlayer: new Audio(),
   audioCtx: null,
   currentUtterance: null,
@@ -17,41 +17,37 @@ const SpeechModule = {
     window.speechSynthesis.onvoiceschanged = load;
   },
 
-  // Xin quyền Micro trực tiếp trên Chrome để hiện bảng "Cho phép" ngay
+  setRate(rate) {
+    this.speechRate = rate;
+    localStorage.setItem("phiendich_rate", String(rate));
+  },
+
   async ensureMicPermission() {
     if (this.micGranted) return true;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      return true;
-    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop());
+      stream.getTracks().forEach((t) => t.stop());
       this.micGranted = true;
       return true;
-    } catch (err) {
+    } catch (_) {
       return false;
     }
   },
 
-  // Mở khóa cổng loa của Chrome / Safari ngay khi người dùng chạm nút
   unlockAudio() {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) {
         if (!this.audioCtx) this.audioCtx = new AudioCtx();
-        if (this.audioCtx.state === "suspended") {
-          this.audioCtx.resume();
-        }
-        const buffer = this.audioCtx.createBuffer(1, 1, 22050);
-        const source = this.audioCtx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(this.audioCtx.destination);
-        source.start(0);
+        if (this.audioCtx.state === "suspended") this.audioCtx.resume();
+        const buf = this.audioCtx.createBuffer(1, 1, 22050);
+        const src = this.audioCtx.createBufferSource();
+        src.buffer = buf;
+        src.connect(this.audioCtx.destination);
+        src.start(0);
       }
-
-      if ("speechSynthesis" in window) {
-        window.speechSynthesis.resume();
-      }
+      if ("speechSynthesis" in window) window.speechSynthesis.resume();
     } catch (_) {}
   },
 
@@ -73,14 +69,14 @@ const SpeechModule = {
 
   async startListening(langCode, { onInterim, onResult, onEnd, onError }) {
     if (!this.isSupported()) {
-      onError("Trình duyệt không hỗ trợ thu âm. Hãy dùng Chrome hoặc Safari.");
+      onError("Trình duyệt chưa hỗ trợ thu âm. Hãy dùng Chrome hoặc Safari.");
       return;
     }
 
     this.unlockAudio();
     const ok = await this.ensureMicPermission();
     if (!ok) {
-      onError("Chrome đang chặn Micro! Bấm vào biểu tượng bên trái thanh địa chỉ để Cho phép.");
+      onError("Chrome đang chặn Micro! Hãy cấp quyền Micro trên thanh địa chỉ.");
       return;
     }
 
@@ -98,6 +94,15 @@ const SpeechModule = {
 
     let finalTranscript = "";
     let lastInterim = "";
+    let delivered = false;
+
+    const deliverNow = (text) => {
+      if (delivered || !text) return;
+      delivered = true;
+      // Nhả mic ngay để dịch + phát loa nhanh tối đa
+      this.stopListening();
+      setTimeout(() => onResult(text), 120);
+    };
 
     recog.onresult = (event) => {
       let interim = "";
@@ -110,12 +115,19 @@ const SpeechModule = {
         }
       }
       lastInterim = interim;
-      if (onInterim) onInterim((finalTranscript + " " + interim).trim());
+      const display = (finalTranscript + " " + interim).trim();
+      if (onInterim && display) onInterim(display);
+
+      // Vừa chốt câu xong là dịch liền không chờ trễ
+      if (finalTranscript.trim()) {
+        deliverNow(finalTranscript.trim());
+      }
     };
 
     recog.onerror = (event) => {
+      if (event.error === "aborted" && delivered) return;
       const msgMap = {
-        "not-allowed": "Chưa cấp quyền Micro. Hãy bấm Cho phép (Allow) trên Chrome.",
+        "not-allowed": "Chưa cấp quyền Micro. Hãy bấm Cho phép (Allow).",
         "no-speech": "Không nghe thấy tiếng. Bấm lại và nói rõ hơn nhé.",
         network: "Lỗi mạng. Kiểm tra lại Wi-Fi / 4G.",
       };
@@ -125,10 +137,9 @@ const SpeechModule = {
     recog.onend = () => {
       this.isListening = false;
       onEnd();
-      const resultText = (finalTranscript || lastInterim).trim();
-      if (resultText) {
-        // Đợi 250ms để hệ điều hành nhả cổng Mic chuyển sang cổng Loa
-        setTimeout(() => onResult(resultText), 250);
+      const fallback = (finalTranscript || lastInterim).trim();
+      if (fallback && !delivered) {
+        deliverNow(fallback);
       }
     };
 
@@ -139,7 +150,9 @@ const SpeechModule = {
 
   stopListening() {
     if (this.recognition && this.isListening) {
-      this.recognition.stop();
+      try {
+        this.recognition.stop();
+      } catch (_) {}
       this.isListening = false;
     }
   },
@@ -155,7 +168,6 @@ const SpeechModule = {
     const matches = list.filter((v) => v.lang.toLowerCase().startsWith(prefix));
     if (matches.length === 0) return null;
 
-    // Ưu tiên giọng cài sẵn trong máy (localService) để không bao giờ bị treo mạng
     return (
       matches.find((v) => v.localService && v.lang.toLowerCase() === langCode.toLowerCase()) ||
       matches.find((v) => v.localService) ||
@@ -172,7 +184,6 @@ const SpeechModule = {
     const shortLang = langCode.slice(0, 2).toLowerCase();
     const bestVoice = this.pickBestVoice(langCode);
 
-    // Nếu máy không có sẵn giọng đọc ngôn ngữ đó (hay gặp với Tiếng Việt trên Windows) -> phát thẳng qua Audio
     if (!("speechSynthesis" in window) || !bestVoice) {
       this.speakViaAudioFallback(text, shortLang, { onStart, onDone, onError });
       return;
@@ -182,13 +193,12 @@ const SpeechModule = {
     let finished = false;
 
     const utter = new SpeechSynthesisUtterance(text);
-    this.currentUtterance = utter; // Giữ tham chiếu để Chrome không tự xóa giữa chừng
+    this.currentUtterance = utter;
     utter.voice = bestVoice;
     utter.lang = bestVoice.lang || langCode;
     utter.rate = this.speechRate;
     utter.volume = 1.0;
 
-    // Nếu sau 1.2 giây loa trình duyệt vẫn im -> tự chuyển sang phát file Audio
     const watchdog = setTimeout(() => {
       if (!started && !finished) {
         finished = true;
@@ -197,7 +207,7 @@ const SpeechModule = {
         } catch (_) {}
         this.speakViaAudioFallback(text, shortLang, { onStart, onDone, onError });
       }
-    }, 1200);
+    }, 1100);
 
     utter.onstart = () => {
       started = true;
@@ -231,7 +241,6 @@ const SpeechModule = {
   },
 
   speakViaAudioFallback(text, shortLang, { onStart, onDone, onError } = {}) {
-    // Chia nhỏ câu nếu quá dài (>180 ký tự)
     const chunks = text.match(/.{1,180}(\s|$)/g) || [text];
     let index = 0;
 
@@ -257,14 +266,14 @@ const SpeechModule = {
       };
       this.audioPlayer.onended = playNext;
       this.audioPlayer.onerror = () => {
-        if (onError) onError("Không phát được loa. Hãy kiểm tra âm lượng máy hoặc quyền Âm thanh trên Chrome.");
+        if (onError) onError("Không phát được loa. Hãy kiểm tra âm lượng máy hoặc quyền Âm thanh.");
         if (onDone) onDone();
       };
 
       const playPromise = this.audioPlayer.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
-          if (onError) onError("Trình duyệt đang chặn tự phát loa. Hãy bấm nút 🔊 Đọc lại.");
+          if (onError) onError("Trình duyệt chặn tự phát loa. Hãy bấm nút 🔊 Đọc lại.");
           if (onDone) onDone();
         });
       }
