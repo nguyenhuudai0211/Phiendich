@@ -1,5 +1,6 @@
 const btnVi = document.getElementById("btn-vi");
 const btnEn = document.getElementById("btn-en");
+const btnTestAudio = document.getElementById("btn-test-audio");
 const btnSpeed = document.getElementById("btn-speed");
 const btnClear = document.getElementById("btn-clear");
 const btnTypeToggle = document.getElementById("btn-type-toggle");
@@ -54,6 +55,7 @@ function addCard(originalText, translatedText, fromLang, targetSpeechLang) {
     SpeechModule.speak(translatedText, targetSpeechLang, {
       onStart: () => setStatus("🔊 Đang phát loa...", "speaking"),
       onDone: () => setStatus("Sẵn sàng — Bấm nút bên dưới để nói"),
+      onError: (msg) => setStatus(msg, "error"),
     });
   });
 
@@ -80,6 +82,7 @@ async function processTranslation(spokenText, direction) {
           "speaking"
         ),
       onDone: () => setStatus("Sẵn sàng — Bấm nút bên dưới để nói"),
+      onError: (msg) => setStatus(msg, "error"),
     });
   } catch (err) {
     setStatus(err.message, "error");
@@ -129,6 +132,24 @@ function handleMicClick(direction) {
 
 btnVi.addEventListener("click", () => handleMicClick("vi-en"));
 btnEn.addEventListener("click", () => handleMicClick("en-vi"));
+
+// Nút mở khóa & kiểm tra loa + mic trên Chrome
+btnTestAudio.addEventListener("click", async () => {
+  SpeechModule.unlockAudio();
+  const micOk = await SpeechModule.ensureMicPermission();
+  setStatus("🔊 Đang thử phát loa Tiếng Anh...", "speaking");
+
+  SpeechModule.speak("Hello! The speaker is connected and ready.", "en-US", {
+    onStart: () => setStatus("🔊 Loa đang phát tiếng Anh...", "speaking"),
+    onDone: () =>
+      setStatus(
+        micOk
+          ? "✅ Mic & Loa đã kết nối xong! Bấm nút bên dưới để nói."
+          : "⚠️ Loa OK, nhưng Chrome đang chặn Mic. Hãy bật quyền Mic."
+      ),
+    onError: (msg) => setStatus(msg, "error"),
+  });
+});
 
 btnSpeed.addEventListener("click", () => {
   if (SpeechModule.speechRate < 1) {
