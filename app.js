@@ -1,19 +1,41 @@
 const btnVi = document.getElementById("btn-vi");
 const btnEn = document.getElementById("btn-en");
 const btnTestAudio = document.getElementById("btn-test-audio");
-const btnSpeed = document.getElementById("btn-speed");
 const btnClear = document.getElementById("btn-clear");
 const btnTypeToggle = document.getElementById("btn-type-toggle");
+const btnSettings = document.getElementById("btn-settings");
+const engineBadge = document.getElementById("engine-badge");
+
 const typeBar = document.getElementById("type-bar");
 const typeDir = document.getElementById("type-dir");
 const typeInput = document.getElementById("type-input");
 const btnTypeSend = document.getElementById("btn-type-send");
+
 const statusBar = document.getElementById("status-bar");
 const statusText = document.getElementById("status-text");
 const chatList = document.getElementById("chat-list");
 const livePreview = document.getElementById("live-preview");
 
+// Modal elements
+const settingsModal = document.getElementById("settings-modal");
+const modalBackdrop = document.getElementById("modal-backdrop");
+const btnCloseModal = document.getElementById("btn-close-modal");
+const btnSaveSettings = document.getElementById("btn-save-settings");
+const geminiKeyInput = document.getElementById("gemini-key-input");
+const speedButtons = document.querySelectorAll("#speed-selector button");
+
 let activeDirection = null;
+let selectedRate = SpeechModule.speechRate;
+
+function updateEngineBadge() {
+  if (Translator.getGeminiKey()) {
+    engineBadge.textContent = "✨ AI Pro";
+    engineBadge.classList.add("pro");
+  } else {
+    engineBadge.textContent = "⚡ Nhanh";
+    engineBadge.classList.remove("pro");
+  }
+}
 
 function setStatus(message, type = "") {
   statusText.textContent = message;
@@ -28,16 +50,26 @@ function resetButtons() {
   activeDirection = null;
 }
 
-function addCard(originalText, translatedText, fromLang, targetSpeechLang) {
+function addCard(originalText, translatedText, fromLang, targetSpeechLang, metaInfo) {
   const empty = chatList.querySelector(".empty-state");
   if (empty) empty.remove();
 
   const card = document.createElement("div");
   card.className = `card ${fromLang === "en" ? "from-en" : "from-vi"}`;
 
+  const top = document.createElement("div");
+  top.className = "card-top";
+
   const meta = document.createElement("div");
   meta.className = "card-meta";
   meta.textContent = fromLang === "vi" ? "Tiếng Việt → Tiếng Anh" : "Tiếng Anh → Tiếng Việt";
+
+  const speedTag = document.createElement("span");
+  speedTag.className = "card-speed";
+  const sec = metaInfo.ms === 0 ? "Tức thì" : `${(metaInfo.ms / 1000).toFixed(2)}s`;
+  speedTag.textContent = `${metaInfo.engine === "AI" ? "✨ AI" : "⚡"} ${sec}`;
+
+  top.append(meta, speedTag);
 
   const origEl = document.createElement("div");
   origEl.className = "card-original";
@@ -47,6 +79,9 @@ function addCard(originalText, translatedText, fromLang, targetSpeechLang) {
   transEl.className = "card-translated";
   transEl.textContent = translatedText;
 
+  const actions = document.createElement("div");
+  actions.className = "card-actions";
+
   const replayBtn = document.createElement("button");
   replayBtn.className = "btn-replay";
   replayBtn.textContent =
@@ -54,12 +89,25 @@ function addCard(originalText, translatedText, fromLang, targetSpeechLang) {
   replayBtn.addEventListener("click", () => {
     SpeechModule.speak(translatedText, targetSpeechLang, {
       onStart: () => setStatus("🔊 Đang phát loa...", "speaking"),
-      onDone: () => setStatus("Sẵn sàng — Bấm nút bên dưới để nói"),
+      onDone: () => setStatus("Sẵn sàng — Chạm nút bên dưới để nói"),
       onError: (msg) => setStatus(msg, "error"),
     });
   });
 
-  card.append(meta, origEl, transEl, replayBtn);
+  const copyBtn = document.createElement("button");
+  copyBtn.className = "btn-copy";
+  copyBtn.textContent = "📋";
+  copyBtn.title = "Sao chép bản dịch";
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(translatedText);
+      copyBtn.textContent = "✅";
+      setTimeout(() => (copyBtn.textContent = "📋"), 1200);
+    } catch (_) {}
+  });
+
+  actions.append(replayBtn, copyBtn);
+  card.append(top, origEl, transEl, actions);
   chatList.appendChild(card);
   chatList.scrollTop = chatList.scrollHeight;
 }
@@ -70,18 +118,18 @@ async function processTranslation(spokenText, direction) {
   const toLang = isViToEn ? "en" : "vi";
   const outputSpeechLang = isViToEn ? "en-US" : "vi-VN";
 
-  setStatus("⏳ Đang dịch...", "listening");
+  setStatus("⚡ Đang dịch...", "listening");
   try {
-    const translated = await Translator.translate(spokenText, fromLang, toLang);
-    addCard(spokenText, translated, fromLang, outputSpeechLang);
+    const result = await Translator.translate(spokenText, fromLang, toLang);
+    addCard(spokenText, result.text, fromLang, outputSpeechLang, result);
 
-    SpeechModule.speak(translated, outputSpeechLang, {
+    SpeechModule.speak(result.text, outputSpeechLang, {
       onStart: () =>
         setStatus(
           isViToEn ? "🔊 Đang phát loa Tiếng Anh..." : "🔊 Đang phát loa Tiếng Việt...",
           "speaking"
         ),
-      onDone: () => setStatus("Sẵn sàng — Bấm nút bên dưới để nói"),
+      onDone: () => setStatus("Sẵn sàng — Chạm nút bên dưới để nói"),
       onError: (msg) => setStatus(msg, "error"),
     });
   } catch (err) {
@@ -106,16 +154,14 @@ function handleMicClick(direction) {
   activeDirection = direction;
   (isViToEn ? btnVi : btnEn).classList.add("recording");
   setStatus(
-    isViToEn ? "🎙️ Đang nghe Tiếng Việt... Hãy nói đi!" : "🎙️ Listening English... Speak now!",
+    isViToEn ? "🎙️ Đang nghe Tiếng Việt..." : "🎙️ Listening English...",
     "listening"
   );
 
   SpeechModule.startListening(inputSpeechLang, {
     onInterim: (text) => {
-      if (text) {
-        livePreview.textContent = `“${text}”`;
-        livePreview.classList.remove("hidden");
-      }
+      livePreview.textContent = `“${text}”`;
+      livePreview.classList.remove("hidden");
     },
     onResult: (spokenText) => {
       processTranslation(spokenText, direction);
@@ -130,35 +176,25 @@ function handleMicClick(direction) {
   });
 }
 
+// Event Listeners
 btnVi.addEventListener("click", () => handleMicClick("vi-en"));
 btnEn.addEventListener("click", () => handleMicClick("en-vi"));
 
-// Nút mở khóa & kiểm tra loa + mic trên Chrome
 btnTestAudio.addEventListener("click", async () => {
   SpeechModule.unlockAudio();
   const micOk = await SpeechModule.ensureMicPermission();
-  setStatus("🔊 Đang thử phát loa Tiếng Anh...", "speaking");
+  setStatus("🔊 Đang kiểm tra loa...", "speaking");
 
-  SpeechModule.speak("Hello! The speaker is connected and ready.", "en-US", {
-    onStart: () => setStatus("🔊 Loa đang phát tiếng Anh...", "speaking"),
+  SpeechModule.speak("Hello! The translator is ready.", "en-US", {
+    onStart: () => setStatus("🔊 Loa đang phát Tiếng Anh...", "speaking"),
     onDone: () =>
       setStatus(
         micOk
-          ? "✅ Mic & Loa đã kết nối xong! Bấm nút bên dưới để nói."
-          : "⚠️ Loa OK, nhưng Chrome đang chặn Mic. Hãy bật quyền Mic."
+          ? "✅ Loa & Mic hoạt động tốt! Bấm nút bên dưới để nói."
+          : "⚠️ Loa OK, nhưng Chrome đang chặn Micro."
       ),
     onError: (msg) => setStatus(msg, "error"),
   });
-});
-
-btnSpeed.addEventListener("click", () => {
-  if (SpeechModule.speechRate < 1) {
-    SpeechModule.speechRate = 1.05;
-    btnSpeed.textContent = "🐇 Vừa";
-  } else {
-    SpeechModule.speechRate = 0.85;
-    btnSpeed.textContent = "🐢 Chậm";
-  }
 });
 
 btnTypeToggle.addEventListener("click", () => {
@@ -183,13 +219,58 @@ btnClear.addEventListener("click", () => {
   SpeechModule.stopAllAudio();
   chatList.innerHTML = `
     <div class="empty-state">
-      <div class="empty-orb">🎙️</div>
-      <h2>Chạm để trò chuyện</h2>
+      <div class="empty-visual">
+        <div class="empty-ring"></div>
+        <div class="empty-core">🎙️</div>
+      </div>
+      <h2>Sẵn sàng phiên dịch</h2>
       <p>
-        Bấm nút <strong class="txt-red">ĐỎ</strong> để nói Tiếng Việt (loa phát Tiếng Anh).<br />
-        Bấm nút <strong class="txt-blue">XANH</strong> để nói Tiếng Anh (loa phát Tiếng Việt).
+        Bấm nút <strong class="c-red">ĐỎ</strong> để nói Tiếng Việt (loa phát Tiếng Anh).<br />
+        Bấm nút <strong class="c-blue">XANH</strong> để nói Tiếng Anh (loa phát Tiếng Việt).
       </p>
+      <div class="empty-tips">
+        <span>⚡ Dịch tức thì</span>
+        <span>🔊 Tự động phát loa</span>
+        <span>✨ Chuẩn giao tiếp</span>
+      </div>
     </div>
   `;
-  setStatus("Đã xóa lịch sử — Bấm nút bên dưới để nói");
+  setStatus("Sẵn sàng — Chạm nút bên dưới để nói");
 });
+
+// Settings Modal
+function openSettings() {
+  geminiKeyInput.value = Translator.getGeminiKey();
+  selectedRate = SpeechModule.speechRate;
+  speedButtons.forEach((btn) => {
+    const r = parseFloat(btn.dataset.rate);
+    btn.classList.toggle("active", Math.abs(r - selectedRate) < 0.05);
+  });
+  settingsModal.classList.remove("hidden");
+}
+
+function closeSettings() {
+  settingsModal.classList.add("hidden");
+}
+
+btnSettings.addEventListener("click", openSettings);
+btnCloseModal.addEventListener("click", closeSettings);
+modalBackdrop.addEventListener("click", closeSettings);
+
+speedButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    speedButtons.forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    selectedRate = parseFloat(btn.dataset.rate);
+  });
+});
+
+btnSaveSettings.addEventListener("click", () => {
+  SpeechModule.setRate(selectedRate);
+  Translator.setGeminiKey(geminiKeyInput.value);
+  updateEngineBadge();
+  closeSettings();
+  setStatus("✅ Đã lưu cài đặt!");
+});
+
+updateEngineBadge();
