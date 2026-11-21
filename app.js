@@ -10,13 +10,14 @@ const typeBar = document.getElementById("type-bar");
 const typeDir = document.getElementById("type-dir");
 const typeInput = document.getElementById("type-input");
 const btnTypeSend = document.getElementById("btn-type-send");
+const quickBar = document.getElementById("quick-bar");
 
 const statusBar = document.getElementById("status-bar");
 const statusText = document.getElementById("status-text");
 const chatList = document.getElementById("chat-list");
 const livePreview = document.getElementById("live-preview");
 
-// Modal elements
+// Settings Modal
 const settingsModal = document.getElementById("settings-modal");
 const modalBackdrop = document.getElementById("modal-backdrop");
 const btnCloseModal = document.getElementById("btn-close-modal");
@@ -24,8 +25,16 @@ const btnSaveSettings = document.getElementById("btn-save-settings");
 const geminiKeyInput = document.getElementById("gemini-key-input");
 const speedButtons = document.querySelectorAll("#speed-selector button");
 
+// Zoom Modal
+const zoomModal = document.getElementById("zoom-modal");
+const btnCloseZoom = document.getElementById("btn-close-zoom");
+const zoomOriginal = document.getElementById("zoom-original");
+const zoomTranslated = document.getElementById("zoom-translated");
+const btnZoomSpeak = document.getElementById("btn-zoom-speak");
+
 let activeDirection = null;
 let selectedRate = SpeechModule.speechRate;
+let zoomPayload = { text: "", lang: "en-US" };
 
 function updateEngineBadge() {
   if (Translator.getGeminiKey()) {
@@ -50,6 +59,13 @@ function resetButtons() {
   activeDirection = null;
 }
 
+function openZoom(orig, trans, langCode) {
+  zoomOriginal.textContent = orig;
+  zoomTranslated.textContent = trans;
+  zoomPayload = { text: trans, lang: langCode };
+  zoomModal.classList.remove("hidden");
+}
+
 function addCard(originalText, translatedText, fromLang, targetSpeechLang, metaInfo) {
   const empty = chatList.querySelector(".empty-state");
   if (empty) empty.remove();
@@ -68,7 +84,6 @@ function addCard(originalText, translatedText, fromLang, targetSpeechLang, metaI
   speedTag.className = "card-speed";
   const sec = metaInfo.ms === 0 ? "Tức thì" : `${(metaInfo.ms / 1000).toFixed(2)}s`;
   speedTag.textContent = `${metaInfo.engine === "AI" ? "✨ AI" : "⚡"} ${sec}`;
-
   top.append(meta, speedTag);
 
   const origEl = document.createElement("div");
@@ -84,8 +99,7 @@ function addCard(originalText, translatedText, fromLang, targetSpeechLang, metaI
 
   const replayBtn = document.createElement("button");
   replayBtn.className = "btn-replay";
-  replayBtn.textContent =
-    fromLang === "vi" ? "🔊 Đọc lại Tiếng Anh" : "🔊 Đọc lại Tiếng Việt";
+  replayBtn.textContent = fromLang === "vi" ? "🔊 Đọc Tiếng Anh" : "🔊 Đọc Tiếng Việt";
   replayBtn.addEventListener("click", () => {
     SpeechModule.speak(translatedText, targetSpeechLang, {
       onStart: () => setStatus("🔊 Đang phát loa...", "speaking"),
@@ -94,10 +108,16 @@ function addCard(originalText, translatedText, fromLang, targetSpeechLang, metaI
     });
   });
 
+  const zoomBtn = document.createElement("button");
+  zoomBtn.className = "btn-mini";
+  zoomBtn.textContent = "🔍";
+  zoomBtn.title = "Phóng to toàn màn hình";
+  zoomBtn.addEventListener("click", () => openZoom(originalText, translatedText, targetSpeechLang));
+
   const copyBtn = document.createElement("button");
-  copyBtn.className = "btn-copy";
+  copyBtn.className = "btn-mini";
   copyBtn.textContent = "📋";
-  copyBtn.title = "Sao chép bản dịch";
+  copyBtn.title = "Sao chép";
   copyBtn.addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(translatedText);
@@ -106,7 +126,7 @@ function addCard(originalText, translatedText, fromLang, targetSpeechLang, metaI
     } catch (_) {}
   });
 
-  actions.append(replayBtn, copyBtn);
+  actions.append(replayBtn, zoomBtn, copyBtn);
   card.append(top, origEl, transEl, actions);
   chatList.appendChild(card);
   chatList.scrollTop = chatList.scrollHeight;
@@ -163,36 +183,32 @@ function handleMicClick(direction) {
       livePreview.textContent = `“${text}”`;
       livePreview.classList.remove("hidden");
     },
-    onResult: (spokenText) => {
-      processTranslation(spokenText, direction);
-    },
+    onResult: (spokenText) => processTranslation(spokenText, direction),
     onError: (errMsg) => {
       setStatus(errMsg, "error");
       resetButtons();
     },
-    onEnd: () => {
-      resetButtons();
-    },
+    onEnd: () => resetButtons(),
   });
 }
 
-// Event Listeners
+// Listeners
 btnVi.addEventListener("click", () => handleMicClick("vi-en"));
 btnEn.addEventListener("click", () => handleMicClick("en-vi"));
 
-btnTestAudio.addEventListener("click", async () => {
+quickBar.addEventListener("click", (e) => {
+  const chip = e.target.closest(".quick-chip");
+  if (!chip) return;
   SpeechModule.unlockAudio();
-  const micOk = await SpeechModule.ensureMicPermission();
-  setStatus("🔊 Đang kiểm tra loa...", "speaking");
+  processTranslation(chip.dataset.text, "vi-en");
+});
 
+btnTestAudio.addEventListener("click", () => {
+  SpeechModule.unlockAudio();
+  setStatus("🔊 Đang kiểm tra loa...", "speaking");
   SpeechModule.speak("Hello! The translator is ready.", "en-US", {
     onStart: () => setStatus("🔊 Loa đang phát Tiếng Anh...", "speaking"),
-    onDone: () =>
-      setStatus(
-        micOk
-          ? "✅ Loa & Mic hoạt động tốt! Bấm nút bên dưới để nói."
-          : "⚠️ Loa OK, nhưng Chrome đang chặn Micro."
-      ),
+    onDone: () => setStatus("✅ Loa hoạt động tốt! Bấm nút bên dưới để dùng."),
     onError: (msg) => setStatus(msg, "error"),
   });
 });
@@ -219,10 +235,7 @@ btnClear.addEventListener("click", () => {
   SpeechModule.stopAllAudio();
   chatList.innerHTML = `
     <div class="empty-state">
-      <div class="empty-visual">
-        <div class="empty-ring"></div>
-        <div class="empty-core">🎙️</div>
-      </div>
+      <img src="icon.svg" alt="Logo" class="empty-logo" width="76" height="76" />
       <h2>Sẵn sàng phiên dịch</h2>
       <p>
         Bấm nút <strong class="c-red">ĐỎ</strong> để nói Tiếng Việt (loa phát Tiếng Anh).<br />
@@ -230,15 +243,21 @@ btnClear.addEventListener("click", () => {
       </p>
       <div class="empty-tips">
         <span>⚡ Dịch tức thì</span>
-        <span>🔊 Tự động phát loa</span>
-        <span>✨ Chuẩn giao tiếp</span>
+        <span>🔊 Tự phát loa</span>
+        <span>🔍 Phóng to chữ</span>
       </div>
     </div>
   `;
   setStatus("Sẵn sàng — Chạm nút bên dưới để nói");
 });
 
-// Settings Modal
+// Zoom Modal Events
+btnCloseZoom.addEventListener("click", () => zoomModal.classList.add("hidden"));
+btnZoomSpeak.addEventListener("click", () => {
+  SpeechModule.speak(zoomPayload.text, zoomPayload.lang);
+});
+
+// Settings Modal Events
 function openSettings() {
   geminiKeyInput.value = Translator.getGeminiKey();
   selectedRate = SpeechModule.speechRate;
@@ -249,13 +268,9 @@ function openSettings() {
   settingsModal.classList.remove("hidden");
 }
 
-function closeSettings() {
-  settingsModal.classList.add("hidden");
-}
-
 btnSettings.addEventListener("click", openSettings);
-btnCloseModal.addEventListener("click", closeSettings);
-modalBackdrop.addEventListener("click", closeSettings);
+btnCloseModal.addEventListener("click", () => settingsModal.classList.add("hidden"));
+modalBackdrop.addEventListener("click", () => settingsModal.classList.add("hidden"));
 
 speedButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -269,7 +284,7 @@ btnSaveSettings.addEventListener("click", () => {
   SpeechModule.setRate(selectedRate);
   Translator.setGeminiKey(geminiKeyInput.value);
   updateEngineBadge();
-  closeSettings();
+  settingsModal.classList.add("hidden");
   setStatus("✅ Đã lưu cài đặt!");
 });
 
