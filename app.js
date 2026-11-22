@@ -1,6 +1,7 @@
 const btnVi = document.getElementById("btn-vi");
 const btnEn = document.getElementById("btn-en");
 const btnTestAudio = document.getElementById("btn-test-audio");
+const btnTheme = document.getElementById("btn-theme");
 const btnClear = document.getElementById("btn-clear");
 const btnTypeToggle = document.getElementById("btn-type-toggle");
 const btnSettings = document.getElementById("btn-settings");
@@ -35,6 +36,20 @@ const btnZoomSpeak = document.getElementById("btn-zoom-speak");
 let activeDirection = null;
 let selectedRate = SpeechModule.speechRate;
 let zoomPayload = { text: "", lang: "en-US" };
+
+// Theme Management (Light / Dark)
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  btnTheme.textContent = theme === "dark" ? "☀️" : "🌙";
+  localStorage.setItem("phiendich_theme", theme);
+}
+
+applyTheme(localStorage.getItem("phiendich_theme") || "light");
+
+btnTheme.addEventListener("click", () => {
+  const current = document.documentElement.getAttribute("data-theme");
+  applyTheme(current === "dark" ? "light" : "dark");
+});
 
 function updateEngineBadge() {
   if (Translator.getGeminiKey()) {
@@ -235,8 +250,10 @@ btnClear.addEventListener("click", () => {
   SpeechModule.stopAllAudio();
   chatList.innerHTML = `
     <div class="empty-state">
-      <img src="icon.svg" alt="Logo" class="empty-logo" width="76" height="76" />
-      <h2>Sẵn sàng phiên dịch</h2>
+      <div class="empty-halo">
+        <img src="icon.svg" alt="Logo" class="empty-logo" width="80" height="80" />
+      </div>
+      <h2>Chạm để phiên dịch ngay</h2>
       <p>
         Bấm nút <strong class="c-red">ĐỎ</strong> để nói Tiếng Việt (loa phát Tiếng Anh).<br />
         Bấm nút <strong class="c-blue">XANH</strong> để nói Tiếng Anh (loa phát Tiếng Việt).
